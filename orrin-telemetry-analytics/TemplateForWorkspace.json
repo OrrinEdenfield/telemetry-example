@@ -108,7 +108,8 @@
 								"parameters": {},
 								"datasetParameters": {
 									"ReadIncoming": {},
-									"WriteToArchiveDaily": {}
+									"WriteToArchiveDaily": {},
+									"sink1": {}
 								}
 							},
 							"staging": {},
@@ -118,6 +119,62 @@
 							},
 							"traceLevel": "Fine"
 						}
+					},
+					{
+						"name": "Move raw file",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "df_PrepDailyFile",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "BinarySource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"wildcardFolderPath": "01-raw-incoming/game-telemetry/game-01/incoming-temp",
+									"wildcardFileName": "*",
+									"deleteFilesAfterCompletion": false
+								},
+								"formatSettings": {
+									"type": "BinaryReadSettings"
+								}
+							},
+							"sink": {
+								"type": "BinarySink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "raw_incoming_source_binary",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "raw_incoming_sink_binary",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
 					}
 				],
 				"policy": {
@@ -130,7 +187,9 @@
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/datasets/adx_IngestTable')]",
 				"[concat(variables('workspaceId'), '/datasets/dailyParquet_IngestTable')]",
-				"[concat(variables('workspaceId'), '/dataflows/df_PrepDailyFile')]"
+				"[concat(variables('workspaceId'), '/dataflows/df_PrepDailyFile')]",
+				"[concat(variables('workspaceId'), '/datasets/raw_incoming_source_binary')]",
+				"[concat(variables('workspaceId'), '/datasets/raw_incoming_sink_binary')]"
 			]
 		},
 		{
@@ -300,6 +359,13 @@
 								"type": "DatasetReference"
 							},
 							"name": "WriteToArchiveDaily"
+						},
+						{
+							"dataset": {
+								"referenceName": "WriteDailyToWorkingFiles",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
 						}
 					],
 					"transformations": [
@@ -335,13 +401,24 @@
 						"     postCommands: [],",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
-						"     partitionBy('hash', 1)) ~> WriteToArchiveDaily"
+						"     partitionBy('hash', 1)) ~> WriteToArchiveDaily",
+						"Aggregate1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'parquet',",
+						"     partitionFileNames:['toString(subDays(currentDate(),1))+\\'.parquet\\''],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink1"
 					]
 				}
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/datasets/dailyParquet_IngestTable')]",
-				"[concat(variables('workspaceId'), '/datasets/ArchiveDailyFileOut')]"
+				"[concat(variables('workspaceId'), '/datasets/ArchiveDailyFileOut')]",
+				"[concat(variables('workspaceId'), '/datasets/WriteDailyToWorkingFiles')]"
 			]
 		},
 		{
@@ -458,12 +535,82 @@
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobFSLocation",
-						"folderPath": "01-raw-incoming/game-telemetry/game-01/archive-daily-files",
+						"folderPath": "00-archive/game-telemetry/game-01/archive-daily-files",
 						"fileSystem": "primaryfilesystem"
 					},
 					"compressionCodec": "snappy"
 				},
 				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/orrin-telemetry-analytics-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WriteDailyToWorkingFiles')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "02-work-in-process/game-telemetry/game-01/daily-files",
+						"fileSystem": "primaryfilesystem"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/orrin-telemetry-analytics-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/raw_incoming_source_binary')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileSystem": "primaryfilesystem"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/orrin-telemetry-analytics-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/raw_incoming_sink_binary')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "00-archive/game-telemetry/game-01/archive-raw-files",
+						"fileSystem": "primaryfilesystem"
+					}
+				}
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/linkedServices/orrin-telemetry-analytics-WorkspaceDefaultStorage')]"
