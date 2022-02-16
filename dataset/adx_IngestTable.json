@@ -1,0 +1,33 @@
+{
+	"name": "adx_IngestTable",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "orrin_telemetry_adx",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureDataExplorerTable",
+		"schema": [
+			{
+				"name": "dateandtime",
+				"type": "datetime"
+			},
+			{
+				"name": "location",
+				"type": "string"
+			},
+			{
+				"name": "net_ping",
+				"type": "real"
+			},
+			{
+				"name": "refresh_rate",
+				"type": "real"
+			}
+		],
+		"typeProperties": {
+			"table": "IngestTable"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

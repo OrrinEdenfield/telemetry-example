@@ -1,0 +1,16 @@
+{
+	"name": "00_setup_adx",
+	"properties": {
+		"content": {
+			"query": "// 20220215\n// Orrin Edenfield\n// MIT License: https://mit-license.org/\n\n// Drop the table if needed\n.drop table IngestTable\n\n// Create target table for telemetry data:\n.create table IngestTable (dateandtime: datetime, location: string, net_ping: real, refresh_rate: real)\n.create table IngestTable ingestion json mapping 'IngestMapping' '[{\"column\":\"dateandtime\",\"path\":\"$.datetime\",\"datatype\":\"datetime\"},{\"column\":\"location\",\"path\":\"$.location\",\"datatype\":\"string\"},{\"column\":\"net_ping\",\"path\":\"$.net_ping\",\"datatype\":\"real\"},{\"column\":\"refresh_rate\",\"path\":\"$.refresh_rate\",\"datatype\":\"real\"}]'\n",
+			"metadata": {
+				"language": "kql"
+			},
+			"currentConnection": {
+				"poolName": "orrinadxpool",
+				"databaseName": "telemetry"
+			}
+		},
+		"type": "KqlQuery"
+	}
+}

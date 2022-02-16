@@ -1,0 +1,16 @@
+{
+	"name": "01-use-sdx",
+	"properties": {
+		"content": {
+			"query": "// 20220215\n// Orrin Edenfield\n// MIT License: https://mit-license.org/\n\n// Return all records\nIngestTable | count\n\n// Let's see the first 1000 records\nIngestTable | take 1000\n\n// Delete all records\n.clear table IngestTable data\n\n// Retrive records from last day\nIngestTable\n| where dateandtime > now(-1d) and dateandtime <= now()\n| order by dateandtime desc\n| limit 10\n| count\n\n// Average net_ping by date & hour, rounded to 2 decimal places\nIngestTable\n| summarize round(avg(net_ping),2) by \n     year = datetime_part(\"year\", dateandtime)\n    ,month = datetime_part(\"month\", dateandtime)\n    ,day = datetime_part(\"day\", dateandtime)\n    ,hour = datetime_part(\"hour\", dateandtime)\n| where hour != ''\n| order by year asc, month asc, day asc, hour asc\n\n// Count of records per hour\nIngestTable\n| summarize RecordCount = count() by ISO8601 = substring(tostring(dateandtime),0,13)\n| where ISO8601 != ''\n| order by ISO8601 asc\n\n\n// Count of messages per deviceID (this could also be per region, sub-region, etc.)\nIngestTable\n| summarize RecordCount = count() by location = location\n| order by location asc\n\n\n// Count of records per hour at each location\nIngestTable\n| summarize RecordCount = count() by ISO8601 = substring(tostring(dateandtime),0,13), location\n| where ISO8601 != '' and ISO8601 != '2021-09-24T13'\n| order by ISO8601 desc, location asc\n\n\n//========= Persist data queries\n\n// Daily query to extract from ADX cluster & persist for historical analysis - new records from today\nIngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-0d))\n| count\n\n// Daily query to extract from ADX cluster & persist for historical analysis - yesterday's records\nIngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-1d))\n| count\n\n// Compare yesterday's data to the day before\nIngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-2d))\n| count\n\n\n// Compare yesterday's data to the day before, and the day before that\nIngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-3d))\n| count\n\n\n// Count of records per hour, exclude first hour data was sent in & latest 1 hour increment\nIngestTable\n| summarize RecordCount = count() by ISO8601 = substring(tostring(dateandtime),0,13), location\n| where ISO8601 != '' and ISO8601 != '2022-02-15T10' and ISO8601 != substring(tostring(now()),0,13)\n| order by ISO8601 desc, location asc\n\n\n// Return most recent records added\nIngestTable\n| order by dateandtime desc\n| limit 15\n",
+			"metadata": {
+				"language": "kql"
+			},
+			"currentConnection": {
+				"poolName": "orrinadxpool",
+				"databaseName": "telemetry"
+			}
+		},
+		"type": "KqlQuery"
+	}
+}

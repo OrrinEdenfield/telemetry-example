@@ -1,0 +1,16 @@
+{
+	"name": "orrin_telemetry_adx",
+	"type": "Microsoft.Synapse/workspaces/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDataExplorer",
+		"typeProperties": {
+			"endpoint": "https://orrinadxpool.orrin-telemetry-analytics.kusto.azuresynapse.net",
+			"database": "telemetry"
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

@@ -1,0 +1,21 @@
+{
+	"name": "dailyParquet_IngestTable",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "01-raw-incoming/game-telemetry/game-01/incoming-temp",
+				"fileSystem": "primaryfilesystem"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}
