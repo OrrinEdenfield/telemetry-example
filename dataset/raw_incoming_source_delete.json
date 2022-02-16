@@ -10,6 +10,7 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
+				"folderPath": "01-raw-incoming/game-telemetry/game-01/incoming-temp",
 				"fileSystem": "primaryfilesystem"
 			}
 		}
