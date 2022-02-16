@@ -10,7 +10,7 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
-				"folderPath": "01-raw-incoming/game-telemetry/game-01/archive-daily-files",
+				"folderPath": "00-archive/game-telemetry/game-01/archive-daily-files",
 				"fileSystem": "primaryfilesystem"
 			},
 			"compressionCodec": "snappy"
