@@ -108,7 +108,8 @@
 								"parameters": {},
 								"datasetParameters": {
 									"ReadIncoming": {},
-									"sink1": {}
+									"sink1": {},
+									"sink2": {}
 								}
 							},
 							"staging": {},
@@ -394,6 +395,13 @@
 								"type": "DatasetReference"
 							},
 							"name": "sink1"
+						},
+						{
+							"dataset": {
+								"referenceName": "WriteDailyToArchiveFiles",
+								"type": "DatasetReference"
+							},
+							"name": "sink2"
 						}
 					],
 					"transformations": [
@@ -429,13 +437,24 @@
 						"     postCommands: [],",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
-						"     partitionBy('hash', 1)) ~> sink1"
+						"     partitionBy('hash', 1)) ~> sink1",
+						"Aggregate1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'parquet',",
+						"     partitionFileNames:[(toString(subDays(currentDate(),1))+'.parquet')],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> sink2"
 					]
 				}
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/datasets/dailyParquet_IngestTable')]",
-				"[concat(variables('workspaceId'), '/datasets/WriteDailyToWorkingFiles')]"
+				"[concat(variables('workspaceId'), '/datasets/WriteDailyToWorkingFiles')]",
+				"[concat(variables('workspaceId'), '/datasets/WriteDailyToArchiveFiles')]"
 			]
 		},
 		{
@@ -651,6 +670,31 @@
 						"fileSystem": "primaryfilesystem"
 					}
 				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/orrin-telemetry-analytics-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WriteDailyToArchiveFiles')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "00-archive/game-telemetry/game-01/archive-daily-files",
+						"fileSystem": "primaryfilesystem"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/linkedServices/orrin-telemetry-analytics-WorkspaceDefaultStorage')]"
