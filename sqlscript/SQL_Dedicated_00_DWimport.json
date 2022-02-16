@@ -2,7 +2,7 @@
 	"name": "SQL_Dedicated_00_DWimport",
 	"properties": {
 		"content": {
-			"query": "-- Create the stored proc to bring in the data daily to the DW internal tables for reporting.\n\n-- Create schemas\ncreate schema staging;\ngo\ncreate schema dw;\ngo\n\n\n\n\n-- Create tables\nCREATE TABLE [staging].[game-01]\n( \n\t[ISO8601] [varchar](20)  NULL,\n\t[location] [varchar](20)  NULL,\n\t[net_ping] [float]  NULL,\n\t[refresh_rate] [float]  NULL\n)\nWITH\n(\n\tDISTRIBUTION = ROUND_ROBIN,\n\tHEAP\n)\nGO\nCREATE TABLE [dw].[games]\n( \n\t[ISO8601] [varchar](20)  NULL,\n\t[location] [varchar](20)  NULL,\n\t[net_ping] [float]  NULL,\n\t[refresh_rate] [float]  NULL\n)\nWITH\n(\n\tDISTRIBUTION = HASH ( [location] ),\n\tCLUSTERED COLUMNSTORE INDEX\n)\nGO\n\n\n\n\n-- Create Stored Proc\nCREATE PROC [dbo].[sp_dwInsert] AS\nBEGIN\n    -- Truncate the staging table. Staging table will only hold new records to be inserted\n    truncate table staging.[game-01];\n\n    -- Insert only new records into the staging table\n    insert into staging.[game-01]\n    select\n         e.ISO8601\n        ,e.location\n        ,e.net_ping\n        ,e.refresh_rate\n    from dbo.game01daily as e\n    left join dw.games as s\n    on \n        e.ISO8601 = s.ISO8601\n    --    and e.deviceid = s.deviceid\n    --    and e.avg_temperature = s.avg_temperature\n    --    and e.avg_humidity = e.avg_humidity\n    where s.ISO8601 is null\n\n    -- Insert new records into the DW table\n    insert into dw.games select * from staging.[game-01];\nEND\nGO\n\n",
+			"query": "",
 			"metadata": {
 				"language": "sql"
 			},
