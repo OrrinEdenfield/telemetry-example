@@ -19,6 +19,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "WriteToArchiveDaily"
+				},
+				{
+					"dataset": {
+						"referenceName": "WriteDailyToWorkingFiles",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
 				}
 			],
 			"transformations": [
@@ -54,7 +61,17 @@
 				"     postCommands: [],",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     partitionBy('hash', 1)) ~> WriteToArchiveDaily"
+				"     partitionBy('hash', 1)) ~> WriteToArchiveDaily",
+				"Aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'parquet',",
+				"     partitionFileNames:['toString(subDays(currentDate(),1))+\\'.parquet\\''],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink1"
 			]
 		}
 	}

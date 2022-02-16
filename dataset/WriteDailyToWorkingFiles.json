@@ -1,0 +1,20 @@
+{
+	"name": "WriteDailyToWorkingFiles",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "02-work-in-process/game-telemetry/game-01/daily-files",
+				"fileSystem": "primaryfilesystem"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}
