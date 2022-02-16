@@ -21,13 +21,31 @@
 					"name": "WriteToArchiveDaily"
 				}
 			],
-			"transformations": [],
+			"transformations": [
+				{
+					"name": "AddISO8601"
+				},
+				{
+					"name": "Aggregate1"
+				}
+			],
 			"scriptLines": [
-				"source(allowSchemaDrift: true,",
+				"source(output(",
+				"          dateandtime as timestamp,",
+				"          location as string,",
+				"          net_ping as double,",
+				"          refresh_rate as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false,",
 				"     format: 'parquet') ~> ReadIncoming",
-				"ReadIncoming sink(allowSchemaDrift: true,",
+				"ReadIncoming derive(ISO8601 = toString(year(toDate(dateandtime))) + '-' + iif(toInteger(month(toDate(dateandtime))) < 10, '0' + toString(month(toDate(dateandtime))), toString(month(toDate(dateandtime)))) + '-' + iif(toInteger(dayOfMonth(toDate(dateandtime))) < 10, '0' + toString(dayOfMonth(toDate(dateandtime))), toString(dayOfMonth(toDate(dateandtime)))) + '-' + iif(toInteger(toString(hour(dateandtime))) < 10, '0' + toString(hour(dateandtime)), toString(hour(dateandtime)))) ~> AddISO8601",
+				"AddISO8601 aggregate(groupBy(ISO8601,",
+				"          location),",
+				"     net_ping = avg(net_ping),",
+				"          refresh_rate = avg(refresh_rate)) ~> Aggregate1",
+				"Aggregate1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'parquet',",
 				"     partitionFileNames:[(toString(subDays(currentDate(),1))+'.parquet')],",
