@@ -1,0 +1,11 @@
+{
+	"name": "orrin_telemetry_analytics",
+	"properties": {
+		"annotations": [],
+		"type": "PowerBIWorkspace",
+		"typeProperties": {
+			"workspaceID": "5826fb25-b808-4d8b-92d4-7a94d8239a51",
+			"tenantID": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+		}
+	}
+}
