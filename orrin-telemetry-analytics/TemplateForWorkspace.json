@@ -423,7 +423,7 @@
 						"Aggregate1 sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
 						"     format: 'parquet',",
-						"     partitionFileNames:['fileout.parquet'],",
+						"     partitionFileNames:[(toString(subDays(currentDate(),1))+'.parquet')],",
 						"     umask: 0022,",
 						"     preCommands: [],",
 						"     postCommands: [],",
