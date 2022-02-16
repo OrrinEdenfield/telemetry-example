@@ -1,0 +1,30 @@
+{
+	"name": "df_PrepDailyFile",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "dailyParquet_IngestTable",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "CreateISO8601"
+				}
+			],
+			"scriptLines": [
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> source1",
+				"source1 derive(ISO8601 = toString(year(toDate(dateandtime))) + '-' + iif(toInteger(month(toDate(dateandtime))) < 10, '0' + toString(month(toDate(dateandtime))), toString(month(toDate(dateandtime)))) + '-' + iif(toInteger(dayOfMonth(toDate(dateandtime))) < 10, '0' + toString(dayOfMonth(toDate(dateandtime))), toString(dayOfMonth(toDate(dateandtime)))) + '-' + iif(toInteger(toString(hour(dateandtime))) < 10, '0' + toString(hour(dateandtime)), toString(hour(dateandtime)))) ~> CreateISO8601"
+			]
+		}
+	}
+}
