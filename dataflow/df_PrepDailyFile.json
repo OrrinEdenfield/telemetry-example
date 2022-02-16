@@ -9,21 +9,34 @@
 						"referenceName": "dailyParquet_IngestTable",
 						"type": "DatasetReference"
 					},
-					"name": "source1"
+					"name": "ReadIncoming"
 				}
 			],
-			"sinks": [],
-			"transformations": [
+			"sinks": [
 				{
-					"name": "DerivedColumn1"
+					"dataset": {
+						"referenceName": "ArchiveDailyFileOut",
+						"type": "DatasetReference"
+					},
+					"name": "WriteToArchiveDaily"
 				}
 			],
+			"transformations": [],
 			"scriptLines": [
 				"source(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false,",
-				"     format: 'parquet') ~> source1",
-				"source1 derive(ISO8601 = toString(year(toDate(dateandtime))) + '-' + iif(toInteger(month(toDate(dateandtime))) < 10, '0' + toString(month(toDate(dateandtime))), toString(month(toDate(dateandtime)))) + '-' + iif(toInteger(dayOfMonth(toDate(dateandtime))) < 10, '0' + toString(dayOfMonth(toDate(dateandtime))), toString(dayOfMonth(toDate(dateandtime)))) + '-' + iif(toInteger(toString(hour(dateandtime))) < 10, '0' + toString(hour(dateandtime)), toString(hour(dateandtime)))) ~> DerivedColumn1"
+				"     format: 'parquet') ~> ReadIncoming",
+				"ReadIncoming sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'parquet',",
+				"     partitionFileNames:[(toString(subDays(currentDate(),1))+'.parquet')],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> WriteToArchiveDaily"
 			]
 		}
 	}
