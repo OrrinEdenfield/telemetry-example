@@ -158,7 +158,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"dataset": {
-						"referenceName": "raw_incoming_source_binary",
+						"referenceName": "raw_incoming_source_delete",
 						"type": "DatasetReference"
 					},
 					"enableLogging": false,
