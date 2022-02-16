@@ -1,0 +1,17 @@
+{
+	"name": "raw_incoming_source_binary",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileSystem": "primaryfilesystem"
+			}
+		}
+	}
+}
