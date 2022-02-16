@@ -82,6 +82,48 @@
 					},
 					"traceLevel": "Fine"
 				}
+			},
+			{
+				"name": "Move raw file",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "df_PrepDailyFile",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"wildcardFolderPath": "01-raw-incoming/game-telemetry/game-01/incoming-temp",
+							"wildcardFileName": "*",
+							"deleteFilesAfterCompletion": false
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "raw_incoming_source_binary",
+						"type": "DatasetReference"
+					}
+				]
 			}
 		],
 		"annotations": [],
