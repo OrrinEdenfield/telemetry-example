@@ -1,0 +1,473 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "orrin-telemetry-analytics"
+		},
+		"orrin-telemetry-analytics-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'orrin-telemetry-analytics-WorkspaceDefaultSqlServer'"
+		},
+		"orrin-telemetry-analytics-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://orrindatalake.dfs.core.windows.net"
+		},
+		"orrin_telemetry_adx_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "telemetry"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/01-pipeline')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Persist to telemetry data lake",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureDataExplorerSource",
+								"query": "IngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-1d))",
+								"queryTimeout": "00:10:00"
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "adx_IngestTable",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "dailyParquet_IngestTable",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "df_PrepDailyFile",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "Persist to telemetry data lake",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "1.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_PrepDailyFile",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"ReadIncoming": {},
+									"WriteToArchiveDaily": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2022-02-16T09:34:25Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/adx_IngestTable')]",
+				"[concat(variables('workspaceId'), '/datasets/dailyParquet_IngestTable')]",
+				"[concat(variables('workspaceId'), '/dataflows/df_PrepDailyFile')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adx_IngestTable')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "orrin_telemetry_adx",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureDataExplorerTable",
+				"schema": [
+					{
+						"name": "dateandtime",
+						"type": "datetime"
+					},
+					{
+						"name": "location",
+						"type": "string"
+					},
+					{
+						"name": "net_ping",
+						"type": "real"
+					},
+					{
+						"name": "refresh_rate",
+						"type": "real"
+					}
+				],
+				"typeProperties": {
+					"table": "IngestTable"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/orrin_telemetry_adx')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/dailyParquet_IngestTable')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "01-raw-incoming/game-telemetry/game-01/incoming-temp",
+						"fileSystem": "primaryfilesystem"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/orrin-telemetry-analytics-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/orrin-telemetry-analytics-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('orrin-telemetry-analytics-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/orrin-telemetry-analytics-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('orrin-telemetry-analytics-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/orrin_telemetry_adx')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureDataExplorer",
+				"typeProperties": {
+					"endpoint": "https://orrinadxpool.orrin-telemetry-analytics.kusto.azuresynapse.net",
+					"database": "[parameters('orrin_telemetry_adx_properties_typeProperties_database')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/df_PrepDailyFile')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "dailyParquet_IngestTable",
+								"type": "DatasetReference"
+							},
+							"name": "ReadIncoming"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ArchiveDailyFileOut",
+								"type": "DatasetReference"
+							},
+							"name": "WriteToArchiveDaily"
+						}
+					],
+					"transformations": [
+						{
+							"name": "AddISO8601"
+						},
+						{
+							"name": "Aggregate1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          dateandtime as timestamp,",
+						"          location as string,",
+						"          net_ping as double,",
+						"          refresh_rate as double",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'parquet') ~> ReadIncoming",
+						"ReadIncoming derive(ISO8601 = toString(year(toDate(dateandtime))) + '-' + iif(toInteger(month(toDate(dateandtime))) < 10, '0' + toString(month(toDate(dateandtime))), toString(month(toDate(dateandtime)))) + '-' + iif(toInteger(dayOfMonth(toDate(dateandtime))) < 10, '0' + toString(dayOfMonth(toDate(dateandtime))), toString(dayOfMonth(toDate(dateandtime)))) + '-' + iif(toInteger(toString(hour(dateandtime))) < 10, '0' + toString(hour(dateandtime)), toString(hour(dateandtime)))) ~> AddISO8601",
+						"AddISO8601 aggregate(groupBy(ISO8601,",
+						"          location),",
+						"     net_ping = avg(net_ping),",
+						"          refresh_rate = avg(refresh_rate)) ~> Aggregate1",
+						"Aggregate1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'parquet',",
+						"     partitionFileNames:[(toString(subDays(currentDate(),1))+'.parquet')],",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     partitionBy('hash', 1)) ~> WriteToArchiveDaily"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/dailyParquet_IngestTable')]",
+				"[concat(variables('workspaceId'), '/datasets/ArchiveDailyFileOut')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL_Dedicated_01')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseParquetFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseParquetFormat] \n\tWITH ( FORMAT_TYPE = PARQUET)\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'primaryfilesystem_orrindatalake_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [primaryfilesystem_orrindatalake_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://primaryfilesystem@orrindatalake.dfs.core.windows.net' \n\t)\nGO\n\ndrop external table game01daily;\ngo\n\nCREATE EXTERNAL TABLE game01daily (\n\t[dateandtime] datetime2(7),\n\t[location] nvarchar(4000),\n\t[net_ping] float,\n\t[refresh_rate] float\n\t)\n\tWITH (\n\tLOCATION = '01-raw-incoming/game-telemetry/game-01/daily/',\n\tDATA_SOURCE = [primaryfilesystem_orrindatalake_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseParquetFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.game01daily\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "SQLDedicated",
+						"poolName": "SQLDedicated"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQL_Serverless_01')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF NOT EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseParquetFormat') \n\tCREATE EXTERNAL FILE FORMAT [SynapseParquetFormat] \n\tWITH ( FORMAT_TYPE = PARQUET)\nGO\n\nIF NOT EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'primaryfilesystem_orrindatalake_dfs_core_windows_net') \n\tCREATE EXTERNAL DATA SOURCE [primaryfilesystem_orrindatalake_dfs_core_windows_net] \n\tWITH (\n\t\tLOCATION = 'abfss://primaryfilesystem@orrindatalake.dfs.core.windows.net' \n\t)\nGO\n\ndrop external table game01daily;\ngo\n\nCREATE EXTERNAL TABLE game01daily (\n\t[dateandtime] datetime2(7),\n\t[location] nvarchar(4000),\n\t[net_ping] float,\n\t[refresh_rate] float\n\t)\n\tWITH (\n\tLOCATION = '01-raw-incoming/game-telemetry/game-01/daily/',\n\tDATA_SOURCE = [primaryfilesystem_orrindatalake_dfs_core_windows_net],\n\tFILE_FORMAT = [SynapseParquetFormat]\n\t)\nGO\n\n\nSELECT TOP 100 * FROM dbo.game01daily\nGO",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "analysis",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/00_setup_adx')]",
+			"type": "Microsoft.Synapse/workspaces/kqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "// 20220215\n// Orrin Edenfield\n// MIT License: https://mit-license.org/\n\n// Drop the table if needed\n.drop table IngestTable\n\n// Create target table for telemetry data:\n.create table IngestTable (dateandtime: datetime, location: string, net_ping: real, refresh_rate: real)\n.create table IngestTable ingestion json mapping 'IngestMapping' '[{\"column\":\"dateandtime\",\"path\":\"$.datetime\",\"datatype\":\"datetime\"},{\"column\":\"location\",\"path\":\"$.location\",\"datatype\":\"string\"},{\"column\":\"net_ping\",\"path\":\"$.net_ping\",\"datatype\":\"real\"},{\"column\":\"refresh_rate\",\"path\":\"$.refresh_rate\",\"datatype\":\"real\"}]'\n",
+					"metadata": {
+						"language": "kql"
+					},
+					"currentConnection": {
+						"poolName": "orrinadxpool",
+						"databaseName": "telemetry"
+					}
+				},
+				"type": "KqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/01-use-sdx')]",
+			"type": "Microsoft.Synapse/workspaces/kqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "// 20220215\n// Orrin Edenfield\n// MIT License: https://mit-license.org/\n\n// Return all records\nIngestTable | count\n\n// Let's see the first 1000 records\nIngestTable | take 1000\n\n// Delete all records\n.clear table IngestTable data\n\n// Retrive records from last day\nIngestTable\n| where dateandtime > now(-1d) and dateandtime <= now()\n| order by dateandtime desc\n| limit 10\n| count\n\n// Average net_ping by date & hour, rounded to 2 decimal places\nIngestTable\n| summarize round(avg(net_ping),2) by \n     year = datetime_part(\"year\", dateandtime)\n    ,month = datetime_part(\"month\", dateandtime)\n    ,day = datetime_part(\"day\", dateandtime)\n    ,hour = datetime_part(\"hour\", dateandtime)\n| where hour != ''\n| order by year asc, month asc, day asc, hour asc\n\n// Count of records per hour\nIngestTable\n| summarize RecordCount = count() by ISO8601 = substring(tostring(dateandtime),0,13)\n| where ISO8601 != ''\n| order by ISO8601 asc\n\n\n// Count of messages per deviceID (this could also be per region, sub-region, etc.)\nIngestTable\n| summarize RecordCount = count() by location = location\n| order by location asc\n\n\n// Count of records per hour at each location\nIngestTable\n| summarize RecordCount = count() by ISO8601 = substring(tostring(dateandtime),0,13), location\n| where ISO8601 != '' and ISO8601 != '2021-09-24T13'\n| order by ISO8601 desc, location asc\n\n\n//========= Persist data queries\n\n// Daily query to extract from ADX cluster & persist for historical analysis - new records from today\nIngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-0d))\n| count\n\n// Daily query to extract from ADX cluster & persist for historical analysis - yesterday's records\nIngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-1d))\n| count\n\n// Compare yesterday's data to the day before\nIngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-2d))\n| count\n\n\n// Compare yesterday's data to the day before, and the day before that\nIngestTable\n| where toint(datetime_part(\"day\", dateandtime)) == datetime_part(\"day\", now(-3d))\n| count\n\n\n// Count of records per hour, exclude first hour data was sent in & latest 1 hour increment\nIngestTable\n| summarize RecordCount = count() by ISO8601 = substring(tostring(dateandtime),0,13), location\n| where ISO8601 != '' and ISO8601 != '2022-02-15T10' and ISO8601 != substring(tostring(now()),0,13)\n| order by ISO8601 desc, location asc\n\n\n// Return most recent records added\nIngestTable\n| order by dateandtime desc\n| limit 15\n",
+					"metadata": {
+						"language": "kql"
+					},
+					"currentConnection": {
+						"poolName": "orrinadxpool",
+						"databaseName": "telemetry"
+					}
+				},
+				"type": "KqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQLDedicated')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "westeurope"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ArchiveDailyFileOut')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "orrin-telemetry-analytics-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "01-raw-incoming/game-telemetry/game-01/archive-daily-files",
+						"fileSystem": "primaryfilesystem"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/orrin-telemetry-analytics-WorkspaceDefaultStorage')]"
+			]
+		}
+	]
+}
