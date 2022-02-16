@@ -1,0 +1,17 @@
+{
+	"name": "SQL_Dedicated_02_Validation",
+	"properties": {
+		"content": {
+			"query": "\nexec [dbo].[sp_dwInsert];\n\nselect top 10 * from dbo.game01daily\nselect count(*) from dbo.game01daily\n-- 28\n\nselect top 10 * from staging.[game-01]\nselect count(*) from staging.[game-01]\n-- 28\n\nselect top 10 * from dw.games\nselect count(*) from dw.games\n-- 28",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "master",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
