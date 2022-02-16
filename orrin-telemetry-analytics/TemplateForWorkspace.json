@@ -11,6 +11,10 @@
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'orrin-telemetry-analytics-WorkspaceDefaultSqlServer'"
 		},
+		"SQLDedicated_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'SQLDedicated'"
+		},
 		"orrin-telemetry-analytics-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://orrindatalake.dfs.core.windows.net"
@@ -209,6 +213,33 @@
 								"enablePartitionDiscovery": false
 							}
 						}
+					},
+					{
+						"name": "Load to DW table",
+						"type": "SqlPoolStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "Delete file copy incoming raw",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"sqlPool": {
+							"referenceName": "SQLDedicated",
+							"type": "SqlPoolReference"
+						},
+						"typeProperties": {
+							"storedProcedureName": "sp_dwInsert"
+						}
 					}
 				],
 				"policy": {
@@ -225,7 +256,8 @@
 				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
 				"[concat(variables('workspaceId'), '/datasets/raw_incoming_source_binary')]",
 				"[concat(variables('workspaceId'), '/datasets/raw_incoming_sink_binary')]",
-				"[concat(variables('workspaceId'), '/datasets/raw_incoming_source_delete')]"
+				"[concat(variables('workspaceId'), '/datasets/raw_incoming_source_delete')]",
+				"[concat(variables('workspaceId'), '/sqlPools/SQLDedicated')]"
 			]
 		},
 		{
@@ -733,6 +765,25 @@
 				}
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SQLDedicated')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('SQLDedicated_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
 		}
 	]
 }

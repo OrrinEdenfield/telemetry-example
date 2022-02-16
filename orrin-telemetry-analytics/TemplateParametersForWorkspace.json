@@ -8,6 +8,9 @@
 		"orrin-telemetry-analytics-WorkspaceDefaultSqlServer_connectionString": {
 			"value": ""
 		},
+		"SQLDedicated_connectionString": {
+			"value": ""
+		},
 		"orrin-telemetry-analytics-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://orrindatalake.dfs.core.windows.net"
 		},
