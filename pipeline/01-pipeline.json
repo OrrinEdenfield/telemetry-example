@@ -138,7 +138,7 @@
 				]
 			},
 			{
-				"name": "Delete1",
+				"name": "Delete file copy incoming raw",
 				"type": "Delete",
 				"dependsOn": [
 					{
