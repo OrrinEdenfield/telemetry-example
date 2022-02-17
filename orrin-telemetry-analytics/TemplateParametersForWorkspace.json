@@ -5,10 +5,10 @@
 		"workspaceName": {
 			"value": "orrin-telemetry-analytics"
 		},
-		"orrin-telemetry-analytics-WorkspaceDefaultSqlServer_connectionString": {
+		"SQLDedicated_connectionString": {
 			"value": ""
 		},
-		"SQLDedicated_connectionString": {
+		"orrin-telemetry-analytics-WorkspaceDefaultSqlServer_connectionString": {
 			"value": ""
 		},
 		"orrin-telemetry-analytics-WorkspaceDefaultStorage_properties_typeProperties_url": {
