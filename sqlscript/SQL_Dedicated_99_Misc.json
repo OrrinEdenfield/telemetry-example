@@ -2,7 +2,7 @@
 	"name": "SQL_Dedicated_99_Misc",
 	"properties": {
 		"content": {
-			"query": "select count(*) from staging.[game-01]\n\nselect count(*) from dw.games\n\n\n\ndrop table dw.games_backup;\n\nselect *\ninto dw.games_backup\nfrom dw.games\n\ndrop table dw.games;\n\nselect *\ninto dw.games\nfrom dw.games_backup",
+			"query": "\nselect count(*) from dw.games\n\n\n\ndrop table dw.games_backup;\n\nselect *\ninto dw.games_backup\nfrom dw.games\n\ndrop table dw.games;\n\nselect *\ninto dw.games\nfrom dw.games_backup",
 			"metadata": {
 				"language": "sql"
 			},
